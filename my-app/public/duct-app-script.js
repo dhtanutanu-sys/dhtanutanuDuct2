@@ -1,4 +1,3 @@
-
 // =================================================================================
 // PWA化のためのコード (ManifestとService Worker)
 // このセクションは、ウェブサイトをアプリのようにインストールして
@@ -792,7 +791,7 @@ class TeeReducer extends DuctPart {
         const intersection_y = this.y + this.intersectionOffset * sin_rad;
         return [{ id: 'center', x: intersection_x, y: intersection_y }];
     }
-    
+
     isPointInside(px, py) {
         const dx = px - this.x;
         const dy = py - this.y;
@@ -1873,7 +1872,7 @@ function showDistanceModal() {
             o.id !== pointInfo.object.id &&
             o.groupId === pointInfo.object.groupId &&
             o.type !== 'StraightDuct' &&
-            o.getConnectors().some(c => Math.hypot(c.x - c.x, c.y - c.y) < 1)
+            o.getConnectors().some(c => Math.hypot(c.x - pointInfo.point.x, c.y - pointInfo.point.y) < 1)
         );
         return connectedFitting || pointInfo.object;
     };
@@ -1907,14 +1906,13 @@ function showDistanceModal() {
         let relevantConn = null;
         for (const fc of fittingConns) {
             // Find the connector on the fitting that is connected to the duct
-            if (ductConns.some(dc => Math.hypot(fc.x - dc.x, fc.y - dc.y) < 1)) {
+            if (ductConns.some(dc => Math.hypot(fc.x - dc.x, dc.y - dc.y) < 1)) {
                 relevantConn = fc;
                 break;
             }
         }
         return getLegLength(fitting, relevantConn);
     };
-
 
     const isP1Intersection = p1_info.pointType === 'intersection';
     const isP2Intersection = p2_info.pointType === 'intersection';
@@ -2262,7 +2260,6 @@ document.getElementById('rotate-btn').addEventListener('click', () => {
         document.getElementById('fittings-modal').classList.remove('flex');
     };
     document.getElementById('save-fittings-btn').onclick = saveFittings;
-
 }
 
 function createPaletteItem(item, type) {
@@ -2533,6 +2530,10 @@ function addFitting(category) {
         newItem.diameter2 = 100; 
         newItem.diameter3 = 100;
         newItem.name = `D${newItem.diameter}-${newItem.diameter2}-${newItem.diameter3}`;
+    } else if (isSimpleReducer) {
+        newItem.length = 150;
+        newItem.diameter2 = 100;
+        newItem.name = `D${newItem.diameter}-${newItem.diameter2}`;
     }
     
     fittings[category].push(newItem);
@@ -2564,6 +2565,8 @@ function saveFittings() {
                 const numValue = parseFloat(input.value);
                 // Store number if valid, otherwise store null to indicate it's empty/not set
                 newItem[prop] = isNaN(numValue) ? null : numValue;
+            } else {
+                newItem[prop] = input.value;
             }
         });
         newFittings[category].push(newItem);
