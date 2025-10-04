@@ -1260,6 +1260,96 @@ function resizeCanvas() {
     draw();
 }
 
+function updateStraightRunDimensions() {
+    // Remove old run dimensions to recalculate every frame, but keep user-created ones.
+    const userDimensions = dimensions.filter(d => !d.isStraightRun);
+
+    const straightDucts = objects.filter(o => o.type === 'StraightDuct');
+    if (straightDucts.length < 2) {
+        dimensions = userDimensions; // Ensure no old run dimensions are left
+        return;
+    }
+
+    const adj = new Map();
+    straightDucts.forEach(duct => adj.set(duct.id, []));
+
+    // 1. Build adjacency list for straight ducts only
+    for (let i = 0; i < straightDucts.length; i++) {
+        for (let j = i + 1; j < straightDucts.length; j++) {
+            const d1 = straightDucts[i];
+            const d2 = straightDucts[j];
+            if (d1.getConnectors().some(c1 => d2.getConnectors().some(c2 => Math.hypot(c1.x - c2.x, c1.y - c2.y) < 1))) {
+                adj.get(d1.id).push(d2.id);
+                adj.get(d2.id).push(d1.id);
+            }
+        }
+    }
+
+    const visited = new Set();
+    const newRunDimensions = [];
+
+    for (const duct of straightDucts) {
+        if (visited.has(duct.id)) continue;
+
+        const componentIds = [];
+        const queue = [duct.id];
+        visited.add(duct.id);
+
+        while (queue.length > 0) {
+            const currentId = queue.shift();
+            componentIds.push(currentId);
+            for (const neighborId of adj.get(currentId)) {
+                if (!visited.has(neighborId)) {
+                    visited.add(neighborId);
+                    queue.push(neighborId);
+                }
+            }
+        }
+
+        if (componentIds.length < 2) continue; // We only care about runs of 2 or more
+
+        const componentObjects = componentIds.map(id => straightDucts.find(d => d.id === id));
+        const endPoints = [];
+
+        for (const ductInComponent of componentObjects) {
+            for (const connector of ductInComponent.getConnectors()) {
+                // A connector is an end if it doesn't connect to another duct IN THIS COMPONENT
+                const isConnectedToComponentDuct = componentObjects.some(otherDuct => {
+                    if (ductInComponent.id === otherDuct.id) return false;
+                    return otherDuct.getConnectors().some(otherConnector => Math.hypot(connector.x - otherConnector.x, connector.y - otherConnector.y) < 1);
+                });
+
+                if (!isConnectedToComponentDuct) {
+                    // This connector is an end of the run. Find the object it's actually connected to (e.g., an elbow).
+                    const connectedFitting = objects.find(o => o.type !== 'StraightDuct' && o.getConnectors().some(c => Math.hypot(c.x - connector.x, c.y - connector.y) < 1));
+                    const endObject = connectedFitting || ductInComponent;
+                    const endPointInfo = connectedFitting 
+                        ? { ...endObject.getConnectors().find(c => Math.hypot(c.x - connector.x, c.y - connector.y) < 1), objId: endObject.id, pointType: 'connector' } 
+                        : { ...connector, objId: endObject.id, pointType: 'connector' };
+
+                    endPoints.push(endPointInfo);
+                }
+            }
+        }
+        
+        if (endPoints.length === 2) {
+            const [p1_info, p2_info] = endPoints;
+            const distance = Math.hypot(p2_info.x - p1_info.x, p2_info.y - p1_info.y);
+
+            const newDim = {
+                p1_objId: p1_info.objId, p1_pointId: p1_info.id, p1_pointType: p1_info.pointType,
+                p2_objId: p2_info.objId, p2_pointId: p2_info.id, p2_pointType: p2_info.pointType,
+                value: distance,
+                isStraightRun: true, // The special flag
+                id: `run-${componentIds.sort().join('-')}` // A stable ID for the run
+            };
+            
+            newRunDimensions.push(newDim);
+        }
+    }
+    dimensions = [...userDimensions, ...newRunDimensions];
+}
+
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
@@ -1270,6 +1360,7 @@ function draw() {
     drawGrid();
     objects.forEach(obj => obj.draw(ctx));
     drawAllSnapPoints(); // Draw snap points on top of objects
+    updateStraightRunDimensions();
     drawDimensions();
     if (mode === 'measure') drawMeasureTool();
     if (drag.isDragging) drawConnectorsForDrag();
@@ -1394,12 +1485,7 @@ function drawMeasureTool() {
 
 function drawDimensions() {
     ctx.save();
-    ctx.strokeStyle = '#0284c7'; // sky-600
-    ctx.fillStyle = '#0284c7';
-    ctx.lineWidth = 1.5 / camera.zoom;
-    ctx.font = `${16 / camera.zoom}px sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'bottom';
+    // Default colors are set inside the loop
 
     const dimensionGroups = new Map();
     dimensions.forEach(dim => {
@@ -1407,29 +1493,23 @@ function drawDimensions() {
         const p2 = getPointForDim(dim.p2_objId, dim.p2_pointType, dim.p2_pointId);
         if (!p1 || !p2) return;
 
-        // グループ化のために線の特性を計算
         let angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
-        // 角度を 0 と PI の間に正規化
         if (angle < 0) angle += Math.PI;
         
-        // 原点から線までの垂線距離を計算
         const A = p1.y - p2.y;
         const B = p2.x - p1.x;
         const C = p1.x * p2.y - p2.x * p1.y;
-        const perpDist = C / Math.sqrt(A*A + B*B); // 符号を保持して線のどちら側か区別
+        const perpDist = C / Math.sqrt(A*A + B*B);
 
-        // 浮動小数点の問題に対応するため、値を丸めてキーを作成
         const key = `${angle.toFixed(2)}|${(perpDist / 10).toFixed(0)}`; 
         
         if (!dimensionGroups.has(key)) {
             dimensionGroups.set(key, []);
         }
-        // 後でソートするために点を付加して格納
         dimensionGroups.get(key).push({ ...dim, p1, p2 });
     });
 
     for (const group of dimensionGroups.values()) {
-        // グループ内の寸法を線の始点位置でソート
         group.sort((a, b) => {
             const angle = Math.atan2(a.p2.y - a.p1.y, a.p2.x - a.p1.x);
             const dirX = Math.cos(angle);
@@ -1440,12 +1520,23 @@ function drawDimensions() {
         });
 
         group.forEach((dimData, indexInGroup) => {
-            const { p1, p2, value } = dimData;
+            const { p1, p2, value, isStraightRun } = dimData;
+
+            if (isStraightRun) {
+                ctx.strokeStyle = 'rgba(239, 68, 68, 0.9)'; // red-500
+                ctx.fillStyle = 'rgba(239, 68, 68, 0.9)';
+            } else {
+                ctx.strokeStyle = '#0284c7'; // sky-600
+                ctx.fillStyle = '#0284c7';
+            }
+            ctx.lineWidth = 1.5 / camera.zoom;
+            ctx.font = `${16 / camera.zoom}px sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
 
             const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
             const perpAngle = angle - Math.PI / 2;
             
-            // indexInGroup を使ってオフセットを計算
             const baseOffset = 60;
             const offsetIncrement = 25;
             const offsetDist = (baseOffset + (indexInGroup * offsetIncrement)) / camera.zoom;
@@ -1484,7 +1575,12 @@ function drawDimensions() {
             const textMetrics = ctx.measureText(text);
             ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
             ctx.fillRect(-textMetrics.width / 2 - (2/camera.zoom), -(16/camera.zoom), textMetrics.width + (4/camera.zoom), (18/camera.zoom));
-            ctx.fillStyle = '#0284c7';
+            
+            if (isStraightRun) {
+                ctx.fillStyle = 'rgba(239, 68, 68, 0.9)';
+            } else {
+                ctx.fillStyle = '#0284c7';
+            }
             ctx.fillText(text, 0, 0);
             ctx.restore();
         });
