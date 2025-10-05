@@ -2154,6 +2154,8 @@ function showNotification(message) {
 // UIとイベントハンドラ
 // =================================================================================
 function setupUI() {
+  // Diagnostic comment to investigate UI instability
+
     document.getElementById('undo-btn').onclick = undo;
     document.getElementById('redo-btn').onclick = redo;
 
@@ -2257,7 +2259,7 @@ function setupUI() {
         camera.zoom = (baseDiameter / diameter) * defaultZoom;
 
         const worldCenter = getWorldMousePos({x: canvas.width/2, y: canvas.height/2});
-        objects.push(new StraightDuct(worldCenter.x, worldCenter.y, { diameter, systemName, length: 300 }));
+        objects.push(new StraightDuct(worldCenter.x, worldCenter.y, { diameter, systemName, length: 200 }));
         
         saveState();
         draw();
