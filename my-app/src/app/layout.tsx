@@ -7,6 +7,7 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "簡易ダクト2Dアプリ",
   description: "ブラウザで使える簡易的なダクト設計2Dアプリケーションです。",
+  viewport: "width=device-width, initial-scale=1",
 };
 
 export default function RootLayout({
