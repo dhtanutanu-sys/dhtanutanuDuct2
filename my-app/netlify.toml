@@ -1,0 +1,8 @@
+# This file overrides all UI settings.
+
+[build]
+  # Command to build the site, run from the repository root.
+  command = "cd my-app && npm run build"
+
+  # The directory to publish, relative to the repository root.
+  publish = "my-app/.next"
