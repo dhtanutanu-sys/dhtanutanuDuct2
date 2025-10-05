@@ -1,5 +1,8 @@
-import DuctAppLoader from './DuctAppLoader';
-
 export default function Page() {
-  return <DuctAppLoader />;
+  return (
+    <div>
+      <h1>Hello, Ductwork App!</h1>
+      <p>This is a test page.</p>
+    </div>
+  );
 }
