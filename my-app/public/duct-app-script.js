@@ -195,16 +195,16 @@ function getDefaultFittings() {
             { id: 'teered-100-100-100', name: 'D100-100-100', diameter: 100, diameter2: 100, diameter3: 100, length: 250, branchLength: 150, intersectionOffset: 0, visible: true },
         ],
         'Y字管レジューサー': [
-            { id: 'yred-100-100-100', name: 'D100-100-100', diameter: 100, diameter2: 100, diameter3: 100, angle: 45, length: 350, branchLength: 200, intersectionOffset: 0, visible: true },
+            { id: 'yred-100-100-100', name: 'D100-100-100', diameter: 100, diameter2: 100, diameter3: 100, angle: 45, length: 350, branchLength: 200, intersectionOffset: 0, visible: false },
         ],
         '可変角度エルボ': [
             { id: 'adjelbow-100-60', name: 'D100 60°', diameter: 100, legLength: 150, angle: 60, visible: false },
         ],
-         '繝ｬ繧ｸ繝･繝ｼ繧ｵ繝ｼ': [
-            { id: 'reducer-100-100', name: 'D100-100', diameter: 100, diameter2: 100, length: 150, visible: false },
+         'レジューサー': [
+            { id: 'reducer-100-100', name: 'D100-100', diameter: 100, diameter2: 100, length: 150, visible: true },
         ],
         'ダンパー': [
-            { id: 'damper-100-100', name: 'VD100 L100', diameter: 100, length: 100, visible: true },
+            { id: 'damper-100-100', name: 'VD100 L100', diameter: 100, length: 100, visible: false },
         ],
     };
 }
