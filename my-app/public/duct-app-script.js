@@ -200,8 +200,11 @@ function getDefaultFittings() {
         '可変角度エルボ': [
             { id: 'adjelbow-100-60', name: 'D100 60°', diameter: 100, legLength: 150, angle: 60, visible: false },
         ],
-         'レジューサー': [
+         '繝ｬ繧ｸ繝･繝ｼ繧ｵ繝ｼ': [
             { id: 'reducer-100-100', name: 'D100-100', diameter: 100, diameter2: 100, length: 150, visible: false },
+        ],
+        'ダンパー': [
+            { id: 'damper-100-100', name: 'D100 L100', diameter: 100, length: 100, visible: true },
         ],
     };
 }
@@ -1106,6 +1109,84 @@ class Reducer extends DuctPart {
     }
 }
 
+class Damper extends DuctPart {
+    constructor(x, y, options = {}) {
+        super(x, y, options);
+        this.type = 'Damper';
+        this.length = options.length === undefined ? 100 : options.length; // Default length for damper
+        this.diameter = options.diameter || 100; // Default diameter for damper
+    }
+
+    draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.rotation * Math.PI / 180);
+        ctx.setLineDash([]);
+
+        const width = this.length;
+        const height = this.diameter;
+
+        ctx.fillStyle = this.color;
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 2;
+        ctx.fillRect(-width/2, -height/2, width, height);
+        ctx.strokeRect(-width/2, -height/2, width, height);
+
+        // Draw damper blades
+        ctx.beginPath();
+        ctx.moveTo(-width/2 + 5, 0);
+        ctx.lineTo(width/2 - 5, 0);
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        if (this.isSelected) {
+            ctx.strokeStyle = '#4f46e5';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(-width/2 - 5, -height/2 - 5, width + 10, height + 10);
+        }
+
+        ctx.fillStyle = '#1e293b';
+        ctx.font = `${18 / camera.zoom}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`D${this.diameter} L${Math.round(this.length)}`, 0, 0);
+
+        this.drawCenterline(ctx);
+        ctx.restore();
+    }
+
+    drawCenterline(ctx) {
+        ctx.beginPath();
+        ctx.strokeStyle = '#334155';
+        ctx.lineWidth = 1 / camera.zoom;
+        ctx.setLineDash([5 / camera.zoom, 5 / camera.zoom]);
+        ctx.moveTo(-this.length / 2, 0);
+        ctx.lineTo(this.length / 2, 0);
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
+    
+    getConnectors() {
+        const rad = this.rotation * Math.PI / 180;
+        const dx = Math.cos(rad) * this.length / 2;
+        const dy = Math.sin(rad) * this.length / 2;
+        return [
+            { id: 0, x: this.x - dx, y: this.y - dy, angle: (this.rotation + 180) % 360, diameter: this.diameter },
+            { id: 1, x: this.x + dx, y: this.y + dy, angle: this.rotation, diameter: this.diameter }
+        ];
+    }
+    
+    isPointInside(px, py) {
+        const dx = px - this.x;
+        const dy = py - this.y;
+        const rad = -this.rotation * Math.PI / 180;
+        const localX = dx * Math.cos(rad) - dy * Math.sin(rad);
+        const localY = dx * Math.sin(rad) + dy * Math.cos(rad);
+        return Math.abs(localX) <= this.length / 2 && Math.abs(localY) <= this.diameter / 2;
+    }
+}
+
 // =================================================================================
 // History (Undo/Redo) Management
 // =================================================================================
@@ -1121,6 +1202,7 @@ function deepCopyObjects(objArray) {
             case 'YBranch': newObj = new YBranch(obj.x, obj.y, options); break;
             case 'YBranchReducer': newObj = new YBranchReducer(obj.x, obj.y, options); break;
             case 'Reducer': newObj = new Reducer(obj.x, obj.y, options); break;
+            case 'Damper': newObj = new Damper(obj.x, obj.y, options); break;
             default: return null;
         }
         newObj.id = obj.id;
@@ -2373,7 +2455,8 @@ function createPaletteItem(item, type) {
     if (type.includes('90°エルボ')) shape = `<path d="M5 45 V 5 H 45" stroke="${color}" stroke-width="10" fill="none" />`;
     else if (type.includes('エルボ')) shape = `<path d="M5 45 L 25 25 L 45 35" stroke="${color}" stroke-width="10" fill="none" />`;
     else if (type.includes('T字管')) shape = `<path d="M5 25 H 45 M 25 25 V 5" stroke="${color}" stroke-width="10" fill="none" />`;
-    else if (type.includes('Y字管')) shape = `<path d="M5 25 H 45 M 25 25 L 40 10" stroke="${color}" stroke-width="8" fill="none" />`;
+    else if (type.includes('Y蟄礼ｮ｡')) shape = `<path d="M5 25 H 45 M 25 25 L 40 10" stroke="${color}" stroke-width="8" fill="none" />`;
+    else if (type.includes('ダンパー')) shape = `<rect x="5" y="20" width="40" height="10" fill="${color}" /><line x1="10" y1="25" x2="40" y2="25" stroke="#1e293b" stroke-width="2" />`;
     else shape = `<rect x="5" y="20" width="40" height="10" fill="${color}" />`;
     svg.innerHTML = shape;
     
@@ -2405,7 +2488,8 @@ function addObject(item, type, pos) {
         case '可変角度エルボ': newObj = new AdjustableElbow(pos.x, pos.y, options); break;
         case 'T字管レジューサー': newObj = new TeeReducer(pos.x, pos.y, options); break;
         case 'Y字管レジューサー': newObj = new YBranchReducer(pos.x, pos.y, options); break;
-        case 'レジューサー': newObj = new Reducer(pos.x, pos.y, options); break;
+        case '繝ｬ繧ｸ繝･繝ｼ繧ｵ繝ｼ': newObj = new Reducer(pos.x, pos.y, options); break;
+        case 'ダンパー': newObj = new Damper(pos.x, pos.y, options); break;
     }
     if (newObj) {
         objects.push(newObj);
@@ -2449,6 +2533,7 @@ function buildFittingsEditor() {
         const hasBranchLength = fittings[category].some(i => i.branchLength !== undefined);
         const hasIntersectionOffset = fittings[category].some(i => i.intersectionOffset !== undefined);
         const hasAngle = fittings[category].some(i => i.angle !== undefined);
+        const isDamper = category === 'ダンパー';
         
         if (hasD2) headers.push('D2(mm)');
         if (hasD3) headers.push('D3(mm)');
@@ -2476,7 +2561,8 @@ function buildFittingsEditor() {
             const isTeeYReducer = category.includes('レジューサー') && (category.includes('Y字管') || category.includes('T字管'));
             const isAdjElbow = category.includes('可変角度エルボ');
             const isSimpleElbow = (category.includes('90°エルボ') || category.includes('45°エルボ'));
-            const isSimpleReducer = category === 'レジューサー';
+            const isSimpleReducer = category === '繝ｬ繧ｸ繝･繝ｼ繧ｵ繝ｼ';
+            const isDamper = category === 'ダンパー';
 
             if (isTeeYReducer) {
                 isAutoNamed = true;
@@ -2485,7 +2571,7 @@ function buildFittingsEditor() {
             } else if (isAdjElbow) {
                 isAutoNamed = true;
                 autoNameType = 'AdjElbow';
-                nameValue = `D${item.diameter || ''} ${item.angle || ''}°`;
+                nameValue = `D${item.diameter || ''} ${item.angle || ''}ﾂｰ`;
             } else if (isSimpleElbow) {
                 isAutoNamed = true;
                 autoNameType = 'Elbow';
@@ -2494,6 +2580,10 @@ function buildFittingsEditor() {
                 isAutoNamed = true;
                 autoNameType = 'Reducer';
                 nameValue = `D${item.diameter || ''}-${item.diameter2 || ''}`;
+            } else if (isDamper) {
+                isAutoNamed = true;
+                autoNameType = 'Damper';
+                nameValue = `D${item.diameter || ''} L${item.length || ''}`;
             }
 
             let cells = `<td class="p-2"><input type="text" value="${nameValue}" class="p-1 border rounded min-w-[50px]" data-prop="name" ${isAutoNamed ? 'readonly style="background-color: #e9e9e9;"' : ''}></td>
