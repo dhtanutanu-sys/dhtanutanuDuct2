@@ -18,7 +18,7 @@ const DuctApp = () => {
         const manifest = {
             "name": "簡易ダクト設計アプリ",
             "short_name": "ダクト設計",
-            "start_url": ".",
+            "start_url": "/",
             "display": "standalone",
             "background_color": "#f3f4f6",
             "theme_color": "#4f46e5",
@@ -129,7 +129,7 @@ const DuctApp = () => {
     }
 
     // PWAセットアップを実行
-    setupPWA();
+    // setupPWA();
 
 
     // =================================================================================
