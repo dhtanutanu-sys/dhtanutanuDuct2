@@ -204,7 +204,7 @@ function getDefaultFittings() {
             { id: 'reducer-100-100', name: 'D100-100', diameter: 100, diameter2: 100, length: 150, visible: false },
         ],
         'ダンパー': [
-            { id: 'damper-100-100', name: 'D100 L100', diameter: 100, length: 100, visible: true },
+            { id: 'damper-100-100', name: 'VD100 L100', diameter: 100, length: 100, visible: true },
         ],
     };
 }
@@ -2753,6 +2753,8 @@ function addFitting(category) {
         newItem.length = 150;
         newItem.diameter2 = 100;
         newItem.name = `D${newItem.diameter}-${newItem.diameter2}`;
+    } else if (category === 'ダンパー') {
+        newItem.name = `VD${newItem.diameter} L${newItem.length}`;
     }
     
     fittings[category].push(newItem);
