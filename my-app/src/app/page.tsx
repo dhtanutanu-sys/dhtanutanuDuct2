@@ -1,7 +1,5 @@
-import dynamic from 'next/dynamic';
-
-const DuctApp = dynamic(() => import('./DuctApp'), { ssr: false });
+import DuctAppLoader from './DuctAppLoader';
 
 export default function Page() {
-  return <DuctApp />;
+  return <DuctAppLoader />;
 }
