@@ -1154,6 +1154,35 @@ class Damper extends DuctPart {
         ctx.textBaseline = 'middle';
         ctx.fillText(`D${this.diameter} L${Math.round(this.length)}`, 0, 0);
 
+        const text = `VD${this.diameter} L${Math.round(this.length)}`;
+        const textMetrics = ctx.measureText(text);
+
+        const angle = (this.rotation % 360 + 360) % 360;
+        const isUpsideDown = angle > 90 && angle < 270;
+
+        ctx.save();
+        if (isUpsideDown) {
+            ctx.rotate(Math.PI);
+        }
+
+        if (textMetrics.width > width - 20) {
+            // Draw with leader line if text is too wide for the duct
+            ctx.beginPath();
+            ctx.moveTo(0, 0); // Start line from center
+            ctx.lineTo(60, height/2 + 60); // End line diagonally down-right
+            ctx.lineTo(textMetrics.width / 2 + 70, height/2 + 60); // Horizontal part
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+            ctx.textAlign = 'left';
+            ctx.fillText(text, 70, height/2 + 60);
+        } else {
+            // Draw text inside the duct
+            ctx.fillText(text, 0, 0);
+        }
+        ctx.restore();
+
         this.drawCenterline(ctx);
         ctx.restore();
     }
@@ -2457,7 +2486,7 @@ function createPaletteItem(item, type) {
     if (type.includes('90°エルボ')) shape = `<path d="M5 45 V 5 H 45" stroke="${color}" stroke-width="10" fill="none" />`;
     else if (type.includes('エルボ')) shape = `<path d="M5 45 L 25 25 L 45 35" stroke="${color}" stroke-width="10" fill="none" />`;
     else if (type.includes('T字管')) shape = `<path d="M5 25 H 45 M 25 25 V 5" stroke="${color}" stroke-width="10" fill="none" />`;
-    else if (type.includes('Y蟄礼ｮ｡')) shape = `<path d="M5 25 H 45 M 25 25 L 40 10" stroke="${color}" stroke-width="8" fill="none" />`;
+    else if (type.includes('Y')) shape = `<path d="M5 25 H 45 M 25 25 L 40 10" stroke="${color}" stroke-width="8" fill="none" />`;
     else if (type.includes('ダンパー')) shape = `<rect x="5" y="20" width="40" height="10" fill="${color}" /><line x1="10" y1="25" x2="40" y2="25" stroke="#1e293b" stroke-width="2" />`;
     else shape = `<rect x="5" y="20" width="40" height="10" fill="${color}" />`;
     svg.innerHTML = shape;
