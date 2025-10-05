@@ -1117,6 +1117,8 @@ class Damper extends DuctPart {
         this.diameter = options.diameter || 100; // Default diameter for damper
     }
 
+    get color() { return '#9ca3af'; } // Distinct gray for dampers
+
     draw(ctx) {
         ctx.save();
         ctx.translate(this.x, this.y);
@@ -2583,7 +2585,7 @@ function buildFittingsEditor() {
             } else if (isDamper) {
                 isAutoNamed = true;
                 autoNameType = 'Damper';
-                nameValue = `D${item.diameter || ''} L${item.length || ''}`;
+                nameValue = `VD${item.diameter || ''} L${item.length || ''}`;
             }
 
             let cells = `<td class="p-2"><input type="text" value="${nameValue}" class="p-1 border rounded min-w-[50px]" data-prop="name" ${isAutoNamed ? 'readonly style="background-color: #e9e9e9;"' : ''}></td>
